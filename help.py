@@ -24,6 +24,7 @@ playerScreen = {
     'stats': 'Season stats',
     'bio': 'Biography and basic info',
     'ratings': 'Current ratings breakdown',
+    'college': 'Estimated college stats based on build',
     'adv': 'Advanced statistics (PER, VORP, BPM, etc.)',
     'hstats': 'Historical statlines for each season',
     'cstats': 'Total career stats',

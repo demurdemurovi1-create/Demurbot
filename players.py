@@ -20,6 +20,7 @@ commandFuncs = {
     'bio': pc.bio,
     'padv': pc.adv,
     'ratings': pc.ratings,
+    'college': pc.college,
     'pshots':pc.shots,
     'shots':pc.shots,
     'adv': pc.adv,
