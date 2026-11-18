@@ -260,6 +260,19 @@ def _upload_export_gzipped(path_to_file, guild_id):
 
 async def update_export_content(message):
 
+    if not REFRESH_TOKEN:
+        # No Dropbox configured: hand out a download link served by the bot itself
+        import export_server
+        url = export_server.public_url(message.guild.id)
+        if not url:
+            await message.channel.send("Export downloads aren't set up on this bot yet (no public domain).")
+            return
+        if not os.path.exists(data_path(f'exports/{message.guild.id}-export.json')):
+            await message.channel.send("No export loaded for this server yet. Use the load command first.")
+            return
+        await message.channel.send('**Your export download link:** ' + url + '\nThe file is a .json.gz; BBGM can import it directly.')
+        return
+
     await message.channel.send('Uploading your export to dropbox...')
     path_to_file = data_path(f'exports/{message.guild.id}-export.json')
     loop = asyncio.get_event_loop()
