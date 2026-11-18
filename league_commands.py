@@ -683,29 +683,27 @@ def _refresh_derived_ratings(p, season):
         current['pot'] = min(100, current['ovr'] + potgap.get(age + 1, 0))
 
 def reprog_player(embed, commandInfo, name):
-    """-reprog <player>: re-roll one player's progression for the current season.
+    """-reprog <player>: re-roll one player's progression for their latest ratings, in any phase.
 
     Starts from the player's previous-season ratings and applies a randomly chosen real
     year-over-year change for their age (from result.txt, built from the league's history).
     """
     gid = str(commandInfo['serverId'])
     export = shared_info.serverExports[gid]
-    season = export['gameAttributes']['season']
     pid = basics.find_match(name, export, False, True, settings=serversList.get(gid))
     p = next((x for x in export['players'] if x['pid'] == pid), None)
-    if p is None or p['retiredYear'] is not None:
-        embed.add_field(name="Player not found", value=f"Couldn't find an active player matching '{name}'.")
+    if p is None or not p['ratings']:
+        embed.add_field(name="Player not found", value=f"Couldn't find a player matching '{name}'.")
         return embed
     full = f"{p['firstName']} {p['lastName']}"
-    if len(p['ratings']) < 2 or p['ratings'][-1]['season'] != season or p['draft']['year'] >= season:
-        embed.add_field(name="Can't re-progress " + full,
-                        value="They need ratings for last season and this season (rookies from this year's draft have no previous season).")
-        return embed
     with open("result.txt") as f:
         table = json.loads(f.readline())
-    age = max(min(season - 1 - p['born']['year'], 37), 18)
+    current = p['ratings'][-1]
+    season = current['season']
+    # Re-roll from last season's ratings; a player with only one season (e.g. a rookie) progresses from it.
+    base = p['ratings'][-2] if len(p['ratings']) > 1 else current
+    age = max(min(base['season'] - p['born']['year'], 37), 18)
     shifts = random.choice(table[str(age)])
-    base, current = p['ratings'][-2], p['ratings'][-1]
     old = {k: current[k] for k in PROG_ORDER}
     old_ovr, old_pot = current['ovr'], current['pot']
     for key, shift in zip(PROG_ORDER, shifts):
@@ -713,17 +711,13 @@ def reprog_player(embed, commandInfo, name):
     _refresh_derived_ratings(p, season)
     changes = sorted(((current[k] - old[k], k) for k in PROG_ORDER), key=lambda c: -abs(c[0]))
     lines = [f"{k}: {old[k]} -> {current[k]} ({d:+d})" for d, k in changes if d != 0] or ["No rating changed."]
-    embed.add_field(name=f"{full} re-progressed (age {season - 1 - p['born']['year']} progression)",
+    embed.add_field(name=f"{full} re-progressed ({season} ratings, age {age} progression)",
                     value=f"ovr {old_ovr} -> {current['ovr']}, pot {old_pot} -> {current['pot']}\n" + "\n".join(lines),
                     inline=False)
     return embed
 
 def reprog(embed, commandInfo):
     export = shared_info.serverExports[str(commandInfo['serverId'])]
-    
-    if export['gameAttributes']['phase'] > 0:
-        embed.add_field(name = "It's not preseason", value = "this can only be done in preseason")
-        return embed
     name_words = []
     for w in commandInfo['text'][1:]:
         try:
@@ -732,6 +726,9 @@ def reprog(embed, commandInfo):
             name_words.append(w)
     if name_words:
         return reprog_player(embed, commandInfo, ' '.join(name_words))
+    if export['gameAttributes']['phase'] > 0:
+        embed.add_field(name = "It's not preseason", value = "league-wide reprog can only be done in preseason (use -reprog <player> for one player at any time)")
+        return embed
     f = open("summaries.txt")
     summaries = json.load(f)
     random.seed(export['gameAttributes']['season']) # should give deterministic ish results on reruns with the same variance
