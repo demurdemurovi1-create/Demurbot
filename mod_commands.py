@@ -138,7 +138,7 @@ async def addaward(embed, text, message):
             newaward = {'season':season,'type':award}
             for a in p['awards']:
 
-                if a['season'] == season and a['type'].lower() == award.lower():
+                if a.get('season') == season and a.get('type', '').lower() == award.lower():
                     embed.add_field(name = "Award not added", value = "player already has that award for that season")
                     return embed
 
@@ -177,7 +177,7 @@ async def removeaward(embed, text, message):
             ct = 0
             for a in p['awards']:
 
-                if a['season'] == season and a['type'].lower() == award.lower():
+                if a.get('season') == season and a.get('type', '').lower() == award.lower():
                     
                     index = ct
                     toremove = a

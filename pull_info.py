@@ -201,7 +201,7 @@ def pinfo(p, season=None):
                 except: pass
         playerDict['awards'] = ""
         for a in p['awards']:
-            if a['season'] == season:
+            if a.get('season') == season and a.get('type'):
                 playerDict['awards'] += a['type'] + ', '
         playerDict['awards'] = playerDict['awards'][:-2]
     #print(playerDict)
