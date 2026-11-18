@@ -1481,13 +1481,14 @@ def college(embed, player, commandInfo):
     seasons = college_stats.build_college_stats(p, draft_row, draft_age)
     info = {'id': commandInfo['id'], 'season': export['gameAttributes']['season']}
     build, _ = _classify_build(p, draft_row, info)
-    lines = [college_stats.HEADER]
-    for i, (label, s) in enumerate(seasons):
-        lines.append(college_stats.fmt_row(label, s))
-    lines.append(college_stats.fmt_row('Career', college_stats.career_line(seasons)))
+    first_year = (draft_year if draft_year > 0 else draft_row['season']) - len(seasons) + 1
     title = f"{school}" + (f" | {build}" if build else "")
-    embed.add_field(name=title, value="```\n" + "\n".join(lines) + "\n```", inline=False)
-    embed.add_field(name='Note', value="Estimated from the player's ratings at each college age. BBGM doesn't store college stats.", inline=False)
+    embed.add_field(name=title, value=f"{len(seasons)} college season(s), estimated from this player's ratings (BBGM keeps no college stats).", inline=False)
+    for i, (label, s) in enumerate(seasons):
+        year = first_year + i
+        embed.add_field(name=f"{college_stats.YEAR_LONG[i]} ({year - 1}-{str(year)[-2:]})", value=college_stats.fmt_lines(s), inline=False)
+    if len(seasons) > 1:
+        embed.add_field(name='College career (per game)', value=college_stats.fmt_lines(college_stats.career_line(seasons)), inline=False)
     return embed
 
 def awards(embed, player, commandInfo):

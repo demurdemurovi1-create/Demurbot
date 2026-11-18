@@ -104,10 +104,15 @@ def build_college_stats(player, draft_ratings, draft_age):
     return seasons
 
 
-def fmt_row(label, s):
-    tp = f"{s['tp_pct'] * 100:4.1f}" if s['tp_pct'] is not None else '  --'
-    return (f"{label:<7}{s['gp']:>3} {s['mpg']:>4.1f} {s['pts']:>4.1f} {s['trb']:>4.1f} {s['ast']:>4.1f} "
-            f"{s['stl']:>3.1f} {s['blk']:>3.1f} {s['fg_pct'] * 100:>4.1f} {tp} {s['ft_pct'] * 100:>4.1f}")
+YEAR_LONG = ['Freshman', 'Sophomore', 'Junior', 'Senior']
+
+
+def fmt_lines(s):
+    """Two short lines per season; reads fine on mobile, no wide table."""
+    tp = f"{s['tp_pct'] * 100:.1f}%" if s['tp_pct'] is not None else 'n/a'
+    return (f"**{s['pts']:.1f}** pts  **{s['trb']:.1f}** reb  **{s['ast']:.1f}** ast  "
+            f"{s['stl']:.1f} stl  {s['blk']:.1f} blk\n"
+            f"FG {s['fg_pct'] * 100:.1f}%  |  3P {tp}  |  FT {s['ft_pct'] * 100:.1f}%  |  {s['mpg']:.1f} min  |  {s['gp']} GP")
 
 
 def career_line(seasons):
@@ -120,6 +125,3 @@ def career_line(seasons):
     return {'gp': total_gp, 'mpg': avg('mpg'), 'pts': avg('pts'), 'trb': avg('trb'), 'ast': avg('ast'),
             'stl': avg('stl'), 'blk': avg('blk'), 'fg_pct': avg('fg_pct'), 'tp_pct': tp, 'ft_pct': ft,
             'tpa': 0, 'fta': 0}
-
-
-HEADER = 'Year   GP  MPG  PTS  REB  AST STL BLK  FG%  3P%  FT%'
