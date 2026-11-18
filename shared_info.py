@@ -232,7 +232,7 @@ _TIP_DESCRIPTIONS = {
     'removereleasedplayer': "Clear a released player's deal (mod)",
     'removetradepen': "Lift a team's trade penalty (mod)",
     'resetgamestrade': 'Make everyone tradeable now (mod)',
-    'reprog': 'Re-run progressions (mod)',
+    'reprog': 'Re-run progressions for everyone, or -reprog <player> for one player (mod)',
     'stripnames': 'Strip real names from the export (mod)',
     'addredirect': 'Add a command alias (mod)',
     'removeredirect': 'Remove a command alias (mod)',
