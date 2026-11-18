@@ -1462,6 +1462,34 @@ def hstats(embed, player, commandInfo):
         embed.add_field(name='Player Stats', value=text, inline=False)
     return embed  
 
+def college(embed, player, commandInfo):
+    """Estimated college stats, shaped by the player's build (BBGM stores none)."""
+    import college as college_stats
+    p = commandInfo['fullplayer']
+    export = shared_info.serverExports[str(commandInfo['id'])]
+    school = p.get('college')
+    if not school:
+        embed.add_field(name='College', value=f"{p['firstName']} {p['lastName']} has no college listed (international or straight to the pros).", inline=False)
+        return embed
+    ratings_rows = p.get('ratings') or []
+    if not ratings_rows:
+        embed.add_field(name='College', value='No ratings on file for this player.', inline=False)
+        return embed
+    draft_year = p['draft'].get('year') or 0
+    draft_row = next((r for r in ratings_rows if r['season'] == draft_year), ratings_rows[0])
+    draft_age = (draft_year if draft_year > 0 else draft_row['season']) - p['born']['year']
+    seasons = college_stats.build_college_stats(p, draft_row, draft_age)
+    info = {'id': commandInfo['id'], 'season': export['gameAttributes']['season']}
+    build, _ = _classify_build(p, draft_row, info)
+    lines = [college_stats.HEADER]
+    for i, (label, s) in enumerate(seasons):
+        lines.append(college_stats.fmt_row(label, s))
+    lines.append(college_stats.fmt_row('Career', college_stats.career_line(seasons)))
+    title = f"{school}" + (f" | {build}" if build else "")
+    embed.add_field(name=title, value="```\n" + "\n".join(lines) + "\n```", inline=False)
+    embed.add_field(name='Note', value="Estimated from the player's ratings at each college age. BBGM doesn't store college stats.", inline=False)
+    return embed
+
 def awards(embed, player, commandInfo):
     export = shared_info.serverExports[str(commandInfo['id'])]
     players = export['players']

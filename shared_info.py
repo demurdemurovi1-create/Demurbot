@@ -94,6 +94,7 @@ _TIP_DESCRIPTIONS = {
     'lmove': 'Slot a player into your lineup',
     'help': 'Browse every command by category',
     'ratings': "A player's full ratings + build",
+    'college': "A player's estimated college stats (based on build)",
     'adv': 'Advanced stats — PER, VORP, BPM',
     'hstats': "A player's year-by-year statlines",
     'cstats': "A player's career totals",

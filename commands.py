@@ -48,6 +48,7 @@ commandsRaw = {
     "stats": 'players',
     "bio": 'players',
     "ratings": 'players',
+    "college": 'players',
     'deleterule':'fa',
     'acceptto':'roster',
     "addgm": 'mods',
