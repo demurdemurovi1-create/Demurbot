@@ -33,9 +33,17 @@ class _Handler(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
 
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
     def _send_text(self, code, text):
         body = text.encode()
         self.send_response(code)
+        self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Content-Type", "text/plain")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
@@ -60,6 +68,7 @@ class _Handler(BaseHTTPRequestHandler):
                 shutil.copyfileobj(f_in, f_out)
             size = os.path.getsize(tmp_path)
             self.send_response(200)
+            self.send_header("Access-Control-Allow-Origin", "*")
             self.send_header("Content-Type", "application/gzip")
             self.send_header("Content-Length", str(size))
             self.send_header("Content-Disposition", f'attachment; filename="{gid}-export.json.gz"')

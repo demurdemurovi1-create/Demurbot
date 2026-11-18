@@ -258,19 +258,23 @@ def _upload_export_gzipped(path_to_file, guild_id):
             pass
 
 
+async def _send_self_hosted_export(message):
+    """Download link served by the bot itself (used when Dropbox is missing or broken)."""
+    import export_server
+    url = export_server.public_url(message.guild.id)
+    if not url:
+        await message.channel.send("Export downloads aren't set up on this bot yet (no public domain).")
+        return
+    if not os.path.exists(data_path(f'exports/{message.guild.id}-export.json')):
+        await message.channel.send("No export loaded for this server yet. Use the load command first.")
+        return
+    await message.channel.send('**Your export download link:** ' + url + '\nIn BBGM: New League > Import League > Enter URL, then paste this link.')
+
+
 async def update_export_content(message):
 
     if not REFRESH_TOKEN:
-        # No Dropbox configured: hand out a download link served by the bot itself
-        import export_server
-        url = export_server.public_url(message.guild.id)
-        if not url:
-            await message.channel.send("Export downloads aren't set up on this bot yet (no public domain).")
-            return
-        if not os.path.exists(data_path(f'exports/{message.guild.id}-export.json')):
-            await message.channel.send("No export loaded for this server yet. Use the load command first.")
-            return
-        await message.channel.send('**Your export download link:** ' + url + '\nThe file is a .json.gz; BBGM can import it directly.')
+        await _send_self_hosted_export(message)
         return
 
     await message.channel.send('Uploading your export to dropbox...')
@@ -278,6 +282,10 @@ async def update_export_content(message):
     loop = asyncio.get_event_loop()
     try:
         url = await loop.run_in_executor(None, _upload_export_gzipped, path_to_file, message.guild.id)
+    except (dropbox.exceptions.AuthError, dropbox.exceptions.BadInputError) as e:
+        print("Dropbox auth failed, using self-hosted export link:", e)
+        await _send_self_hosted_export(message)
+        return
     except dropbox.exceptions.ApiError as e:
         # Detect storage-full so we surface a clear message and don't
         # let Sentry get spammed with the same infra issue from every
