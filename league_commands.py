@@ -658,12 +658,80 @@ def pickvalue(embed, commandInfo):
     del fig
 
     return embed
+PROG_ORDER = ['stre', 'spd', 'jmp', 'endu', 'ins', 'dnk', 'ft', 'fg', 'tp', 'oiq', 'diq', 'drb', 'pss', 'reb']
+
+def _refresh_derived_ratings(p, season):
+    """Recompute skills, ovr and pot on a player's latest ratings row after the ratings changed."""
+    current = p['ratings'][-1]
+    compdict = player_commands.calccomp(p, season, extra=True)
+    skillstring = []
+    if compdict is not None:
+        for key, cutoff, label in (('3', 59, '3'), ('A', 63, 'A'), ('B', 68, 'B'), ('Di', 57, 'Di'),
+                                   ('Dp', 61, 'Dp'), ('Po', 61, 'Po'), ('Ps', 63, 'Ps'), ('R', 61, 'R'),
+                                   ('Usage', 61, 'V')):
+            if compdict[key] > cutoff:
+                skillstring.append(label)
+    current['skills'] = skillstring
+    current['ovr'] = player_commands.ovr(current)
+    age = season - 1 - p['born']['year']
+    potgap = {18: 25, 19: 20, 20: 15, 21: 12, 22: 9, 23: 6, 24: 4, 25: 2, 26: 2, 27: 1, 28: 1}
+    if age < 18:
+        current['pot'] = min(100, current['ovr'] + 30)
+    elif age > 28:
+        current['pot'] = min(100, current['ovr'])
+    else:
+        current['pot'] = min(100, current['ovr'] + potgap.get(age + 1, 0))
+
+def reprog_player(embed, commandInfo, name):
+    """-reprog <player>: re-roll one player's progression for the current season.
+
+    Starts from the player's previous-season ratings and applies a randomly chosen real
+    year-over-year change for their age (from result.txt, built from the league's history).
+    """
+    gid = str(commandInfo['serverId'])
+    export = shared_info.serverExports[gid]
+    season = export['gameAttributes']['season']
+    pid = basics.find_match(name, export, False, True, settings=serversList.get(gid))
+    p = next((x for x in export['players'] if x['pid'] == pid), None)
+    if p is None or p['retiredYear'] is not None:
+        embed.add_field(name="Player not found", value=f"Couldn't find an active player matching '{name}'.")
+        return embed
+    full = f"{p['firstName']} {p['lastName']}"
+    if len(p['ratings']) < 2 or p['ratings'][-1]['season'] != season or p['draft']['year'] >= season:
+        embed.add_field(name="Can't re-progress " + full,
+                        value="They need ratings for last season and this season (rookies from this year's draft have no previous season).")
+        return embed
+    with open("result.txt") as f:
+        table = json.loads(f.readline())
+    age = max(min(season - 1 - p['born']['year'], 37), 18)
+    shifts = random.choice(table[str(age)])
+    base, current = p['ratings'][-2], p['ratings'][-1]
+    old = {k: current[k] for k in PROG_ORDER}
+    old_ovr, old_pot = current['ovr'], current['pot']
+    for key, shift in zip(PROG_ORDER, shifts):
+        current[key] = max(0, min(100, base[key] + int(shift)))
+    _refresh_derived_ratings(p, season)
+    changes = sorted(((current[k] - old[k], k) for k in PROG_ORDER), key=lambda c: -abs(c[0]))
+    lines = [f"{k}: {old[k]} -> {current[k]} ({d:+d})" for d, k in changes if d != 0] or ["No rating changed."]
+    embed.add_field(name=f"{full} re-progressed (age {season - 1 - p['born']['year']} progression)",
+                    value=f"ovr {old_ovr} -> {current['ovr']}, pot {old_pot} -> {current['pot']}\n" + "\n".join(lines),
+                    inline=False)
+    return embed
+
 def reprog(embed, commandInfo):
     export = shared_info.serverExports[str(commandInfo['serverId'])]
     
     if export['gameAttributes']['phase'] > 0:
         embed.add_field(name = "It's not preseason", value = "this can only be done in preseason")
         return embed
+    name_words = []
+    for w in commandInfo['text'][1:]:
+        try:
+            float(w)
+        except ValueError:
+            name_words.append(w)
+    if name_words:
+        return reprog_player(embed, commandInfo, ' '.join(name_words))
     f = open("summaries.txt")
     summaries = json.load(f)
     random.seed(export['gameAttributes']['season']) # should give deterministic ish results on reruns with the same variance
@@ -739,7 +807,7 @@ def reprog(embed, commandInfo):
                 elif age > 28:
                     p['ratings'][-1]['pot'] = min(100,ovr(current))
                 else:
-                    p['ratings'][-1]['pot'] = min(100,ovr(current) + potgap[age+1])
+                    p['ratings'][-1]['pot'] = min(100,ovr(current) + potgap.get(age+1, 0))
 
     embed.add_field(name = "Progs Done with variance "+str(variance*2), value = "go ahead and do -pratings on everyone now.")
     

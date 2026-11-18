@@ -192,7 +192,7 @@ modScreen = {
     'removereleasedplayer': 'Remove a released player\'s contract',
     'removetradepen': 'Remove trade penalty from a team',
     'resetgamestrade': 'Make all players tradeable immediately',
-    'reprog': 'Re-run progressions',
+    'reprog': 'Re-run progressions for everyone, or -reprog <player> for one player (mod)',
     'stripnames': 'Strip real names from export',
     'addredirect': 'Add a command redirect',
     'removeredirect': 'Remove a command redirect',
