@@ -2,6 +2,24 @@ import decimal
 import copy
 import basics
 
+_ORD = {1: 'First', 2: 'Second', 3: 'Third'}
+def award_type(a):
+    """Label for a player award. Old exports store {'type': ...}; newer BBGM stores
+    {'name', 'rank', 'numTeams'}. Returns None for non-wins (vote placements)."""
+    t = a.get('type')
+    if t:
+        return t
+    name = a.get('name')
+    if not name:
+        return None
+    rank = a.get('rank', 1)
+    if name in ('All-League', 'All-Defensive'):
+        return f"{_ORD.get(rank, str(rank))} Team {name}"
+    if name == 'All-Rookie':
+        return 'All-Rookie Team'
+    return name if rank == 1 else None
+
+
 def pstats(player, season, playoffs=False, qualifiers=False, tids = "All"):
     if 'stats' in player:
         #modify
@@ -201,8 +219,8 @@ def pinfo(p, season=None):
                 except: pass
         playerDict['awards'] = ""
         for a in p['awards']:
-            if a.get('season') == season and a.get('type'):
-                playerDict['awards'] += a['type'] + ', '
+            if a.get('season') == season and award_type(a):
+                playerDict['awards'] += award_type(a) + ', '
         playerDict['awards'] = playerDict['awards'][:-2]
     #print(playerDict)
     return playerDict

@@ -188,7 +188,7 @@ def whoidolizes(embed, player, commandInfo):
         isgoated = False
         allstars = 0
         for a in p2['awards']:
-            if a.get('type') == "All-Star":
+            if pull_info.award_type(a) == "All-Star":
                 allstars += 1
         peakovrrating = []
         peakovr = 0
@@ -224,7 +224,7 @@ def whoidolizes(embed, player, commandInfo):
                 isgoated = False
                 allstars = 0
                 for a in p2['awards']:
-                    if a.get('type') == "All-Star":
+                    if pull_info.award_type(a) == "All-Star":
                         allstars += 1
                 peakovrrating = []
                 peakovr = 0
@@ -255,11 +255,11 @@ def whoidolizes(embed, player, commandInfo):
                         if l in peakovrrating['pos']:
                             score += 40
                     for a in p2['awards']:
-                        if a.get('type') == "Finals MVP":
+                        if pull_info.award_type(a) == "Finals MVP":
                             score += 10
-                        if a.get('type') == "Most Valuable Player":
+                        if pull_info.award_type(a) == "Most Valuable Player":
                             score += 10
-                        if a.get('type') == "Won Championship":
+                        if pull_info.award_type(a) == "Won Championship":
                             score += 5
                     if peakovrrating['ovr'] < dr['pot']-3:
         
@@ -744,7 +744,7 @@ def bio(embed, player, commandInfo):
             isgoated = False
             allstars = 0
             for a in p2['awards']:
-                if a.get('type') == "All-Star":
+                if pull_info.award_type(a) == "All-Star":
                     if a['season'] < dy-2:
                         allstars += 1
             peakovrrating = []
@@ -775,11 +775,11 @@ def bio(embed, player, commandInfo):
                     if l in peakovrrating['pos']:
                         score += 40
                 for a in p2['awards']:
-                    if a.get('type') == "Finals MVP":
+                    if pull_info.award_type(a) == "Finals MVP":
                         score += 10
-                    if a.get('type') == "Most Valuable Player":
+                    if pull_info.award_type(a) == "Most Valuable Player":
                         score += 10
-                    if a.get('type') == "Won Championship":
+                    if pull_info.award_type(a) == "Won Championship":
                         score += 5
                 if peakovrrating['ovr'] < dr['pot']-3:
     
@@ -1189,37 +1189,37 @@ def pcompare(embed, player, commandInfo):
     sa = [0,0,0,0,0,0]
     for a in fplayer['awards']:
 
-        if a.get('type') == "Most Valuable Player":
+        if pull_info.award_type(a) == "Most Valuable Player":
             if fyear == a['season'] or fyear == 'career':
                 fa[0] += 1
-        if a.get('type') == "Won Championship":
+        if pull_info.award_type(a) == "Won Championship":
             if fyear == a['season'] or fyear == 'career':
                 fa[1] += 1
-        if a.get('type') == "Finals MVP":
+        if pull_info.award_type(a) == "Finals MVP":
             if fyear == a['season'] or fyear == 'career':
                 fa[2] += 1
-        if a.get('type') == "Defensive Player of the Year":
+        if pull_info.award_type(a) == "Defensive Player of the Year":
             if fyear == a['season'] or fyear == 'career':
                 fa[3] += 1
-        if a.get('type') == "All-Star":
+        if pull_info.award_type(a) == "All-Star":
             if fyear == a['season'] or fyear == 'career':
                 fa[4] += 1
     if len(fplayer['awards']) == 0:
         fa[5] = 1
     for a in splayer['awards']:
-        if a.get('type') == "Most Valuable Player":
+        if pull_info.award_type(a) == "Most Valuable Player":
             if syear == a['season'] or syear == 'career':
                 sa[0] += 1
-        if a.get('type') == "Won Championship":
+        if pull_info.award_type(a) == "Won Championship":
             if syear == a['season'] or syear == 'career':
                 sa[1] += 1
-        if a.get('type') == "Finals MVP":
+        if pull_info.award_type(a) == "Finals MVP":
             if syear == a['season'] or syear == 'career':
                 sa[2] += 1
-        if a.get('type') == "Defensive Player of the Year":
+        if pull_info.award_type(a) == "Defensive Player of the Year":
             if syear == a['season'] or syear == 'career':
                 sa[3] += 1
-        if a.get('type') == "All-Star":
+        if pull_info.award_type(a) == "All-Star":
             if syear == a['season'] or syear == 'career':
                 sa[4] += 1
 
@@ -1416,13 +1416,13 @@ def hstats(embed, player, commandInfo):
     for p in players:
         if p['pid'] == player['pid']:
             for a in p['awards']:
-                if a.get('type') == 'All-Star':
+                if pull_info.award_type(a) == 'All-Star':
                     allstaryears.append(a['season'])
-                if a.get('type') == "Most Valuable Player":
+                if pull_info.award_type(a) == "Most Valuable Player":
                     mvpyears.append(a['season'])
-                if a.get('type') == 'Finals MVP':
+                if pull_info.award_type(a) == 'Finals MVP':
                     fmvpyears.append(a['season'])
-                if a.get('type') == "Won Championship":
+                if pull_info.award_type(a) == "Won Championship":
                     championshipyears.append(a['season'])
     teams = export['teams']
     if commandInfo['message'].content.split(" ")[0].__contains__('phs') or commandInfo['message'].content.split(" ")[0].__contains__('phstats'):
@@ -1472,14 +1472,14 @@ def awards(embed, player, commandInfo):
             awards = p['awards']
             totalAwards = []
             for a in awards:
-                if a.get('type'):
-                    totalAwards.append(a['type'])
+                if pull_info.award_type(a):
+                    totalAwards.append(pull_info.award_type(a))
             totalAwards = list(dict.fromkeys(totalAwards))
             for t in totalAwards:
                 numAward = 0
                 awardSeasons = []
                 for a in awards:
-                    if a.get('type') == t:
+                    if pull_info.award_type(a) == t:
                         numAward += 1
                         awardSeasons.append(str(a['season']))
                 awardYears = ', '.join(awardSeasons)

@@ -138,7 +138,7 @@ async def process_text(text, message):
             if p['retired']:
                 titles = 0
                 for a in p['awards']:
-                    if a.get('type') == 'Won Championship':
+                    if pull_info.award_type(a) == 'Won Championship':
                         titles += 1
                 embed.add_field(name=f'Championships: {titles}', value='', inline=False)
             else:
