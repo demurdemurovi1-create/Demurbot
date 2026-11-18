@@ -1377,14 +1377,14 @@ def topall(embed, commandInfo):
             a = player['awards']
             t = 0
             for award in a:
-                if award["type"].replace("-"," ").lower().__contains__(indicate.lower()):
+                if award.get("type") and award["type"].replace("-"," ").lower().__contains__(indicate.lower()):
                     t += 1
                 if indicate == "Biggest Booty":
-                    if "All-Star MVP" in award["type"]:
+                    if "All-Star MVP" in award.get("type", ""):
                          t = 1
-                    if "Slam Dunk" in award["type"]:
+                    if "Slam Dunk" in award.get("type", ""):
                         t += 1
-                    if "Three Point" in award["type"]:
+                    if "Three Point" in award.get("type", ""):
                         t += 1
                 
             if t > 0:
