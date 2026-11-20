@@ -1157,7 +1157,12 @@ async def resign_prices(playerId, teamId, serverExport, serverId, values):
                 #ratio = (2/(2-baseratio)-1)**4
                 basePricePre = ratio*big+(1-ratio)*small
                 basePricePre = round(round(basePricePre/1000,2)*1000,1)
-            if basePricePre < basePrice:
+            cd = p.get('contractDemand')
+            if isinstance(cd, dict) and cd.get('amount'):
+                # BBGM's own ask from the export; the bot's value-based estimate is only a fallback
+                basePrice = max(small, min(big, cd['amount']))
+                print("using BBGM ask "+str(basePrice))
+            elif basePricePre < basePrice:
                 print("adjusted from "+str(basePrice)+" to "+str(basePricePre))
                 basePrice = basePricePre
             else:
