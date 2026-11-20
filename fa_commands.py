@@ -1325,9 +1325,12 @@ async def autoresign(embed, text, commandInfo):
                                 if accepted:
                                     #re-signing festivities
                                     p['tid'] = team['tid']
+                                    newexp = p['contract']['exp']
+                                    if newexp <= season:
+                                        newexp = season + free_agency_runner.preferred_resign_years(p, season, export['gameAttributes'])
                                     p['contract'] = {
                                         "amount": p['contract']['amount'],
-                                        "exp": p['contract']['exp']
+                                        "exp": newexp
                                     }
                                     p['gamesUntilTradable'] = serversList[str(commandInfo['serverId'])]['traderesign']
                                     for i in range(p['contract']['exp'] - season):

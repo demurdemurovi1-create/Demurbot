@@ -1076,6 +1076,38 @@ async def run_fa(offerList, signings, playersDone, invalidations, serverId):
     await basics.save_db(serversList)
     return (offerList, signings, playersDone, invalidations, finalSignings, validOffers)
 
+def preferred_resign_years(p, season, settings):
+    """How many years a player wants when re-signing.
+
+    New BBGM exports no longer carry the re-sign ask in p['contract'] (it still holds the
+    expiring deal, so exp - season is 0). BBGM's own ask is in p['contractDemand']; use its
+    years. If that is missing, fall back to an age-based guess (younger want longer deals)
+    with a small stable per-player variation.
+    """
+    cd = p.get('contractDemand')
+    if isinstance(cd, dict) and cd.get('exp') is not None:
+        askYears = cd['exp'] - season
+        if askYears >= 1:
+            lo = settings.get('minContractLength', 1) or 1
+            hi = settings.get('maxContractLength', 5) or 5
+            return max(lo, min(hi, askYears))
+    age = season - p['born']['year']
+    if age <= 23:
+        years = 5
+    elif age <= 26:
+        years = 4
+    elif age <= 29:
+        years = 3
+    elif age <= 32:
+        years = 2
+    else:
+        years = 1
+    years += random.Random(p['pid'] * 31 + season).choice([-1, 0, 0, 1])
+    lo = settings.get('minContractLength', 1) or 1
+    hi = settings.get('maxContractLength', 5) or 5
+    return max(lo, min(hi, years))
+
+
 async def resign_prices(playerId, teamId, serverExport, serverId, values):
     players = serverExport['players']
     season = serverExport['gameAttributes']['season']
@@ -1133,6 +1165,9 @@ async def resign_prices(playerId, teamId, serverExport, serverId, values):
 
             
             baseYears = p['contract']['exp'] - season
+            if baseYears < 1:
+                # New-format exports keep the expiring contract here (exp == season), not an ask
+                baseYears = preferred_resign_years(p, season, settings)
             if basePrice == serverExport['gameAttributes']['minContract']:
                 reSignFinal = [basePrice, baseYears]
             else:
