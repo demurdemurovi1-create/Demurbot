@@ -1080,9 +1080,17 @@ def preferred_resign_years(p, season, settings):
     """How many years a player wants when re-signing.
 
     New BBGM exports no longer carry the re-sign ask in p['contract'] (it still holds the
-    expiring deal, so exp - season is 0). Younger players want longer deals, older players
-    shorter ones, with a small stable per-player variation.
+    expiring deal, so exp - season is 0). BBGM's own ask is in p['contractDemand']; use its
+    years. If that is missing, fall back to an age-based guess (younger want longer deals)
+    with a small stable per-player variation.
     """
+    cd = p.get('contractDemand')
+    if isinstance(cd, dict) and cd.get('exp') is not None:
+        askYears = cd['exp'] - season
+        if askYears >= 1:
+            lo = settings.get('minContractLength', 1) or 1
+            hi = settings.get('maxContractLength', 5) or 5
+            return max(lo, min(hi, askYears))
     age = season - p['born']['year']
     if age <= 23:
         years = 5
