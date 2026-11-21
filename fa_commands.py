@@ -112,7 +112,7 @@ async def decidepo(embed, text, commandInfo):
                             "amount": amount*1000,
                             "exp":expiration + 1
                         }
-                        p['gamesUntilTradable'] = serversList[str(commandInfo['serverId'])]['traderesign']
+                        p['gamesUntilTradable'] = int(serversList[str(commandInfo['serverId'])].get('traderesign', 0))
                         
                         for i in range(0,1):
                             salaryInfo = dict()
@@ -1332,7 +1332,7 @@ async def autoresign(embed, text, commandInfo):
                                         "amount": p['contract']['amount'],
                                         "exp": newexp
                                     }
-                                    p['gamesUntilTradable'] = serversList[str(commandInfo['serverId'])]['traderesign']
+                                    p['gamesUntilTradable'] = int(serversList[str(commandInfo['serverId'])].get('traderesign', 0))
                                     for i in range(p['contract']['exp'] - season):
                                         salaryInfo = dict()
                                         salaryInfo['season'] = season + i + 1
@@ -1949,6 +1949,7 @@ async def runresign(embed, text, commandInfo):
                                     accepted = True
                                 else:
                                     teamList = serversList[str(commandInfo['serverId'])]['teamlist']
+                                    textToSend = p['firstName'] + ' ' + p['lastName'] + ' declines the offer from ' + team['abbrev'] + ' (' + str(round(probability*100, 2)) + '% chance to accept).'
                                     for tl in teamList:
                                         if teamList[tl] == team['tid']:
                                             try:
@@ -1968,7 +1969,7 @@ async def runresign(embed, text, commandInfo):
                                         "amount": t['amount']*1000,
                                         "exp": season + t['years']
                                     }
-                                    p['gamesUntilTradable'] = serversList[str(commandInfo['serverId'])]['traderesign']
+                                    p['gamesUntilTradable'] = int(serversList[str(commandInfo['serverId'])].get('traderesign', 0))
                                     for i in range(t['years']):
                                         salaryInfo = dict()
                                         salaryInfo['season'] = season + i + 1

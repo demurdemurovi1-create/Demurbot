@@ -528,7 +528,7 @@ async def acceptto(embed, text, commandInfo):
                         "amount": amount,
                         "exp": export['gameAttributes']['season']+1
                     }
-                    p['gamesUntilTradable'] = serversList[str(commandInfo['serverId'])]['traderesign']
+                    p['gamesUntilTradable'] = int(serversList[str(commandInfo['serverId'])].get('traderesign', 0))
                     for i in range(0,1):
                         salaryInfo = dict()
                         salaryInfo['season'] = export['gameAttributes']['season'] + i + 1
@@ -649,7 +649,7 @@ async def acceptrookieoption(embed, text, commandInfo):
                         "amount": amount,
                         "exp": export['gameAttributes']['season']+1
                     }
-                    p['gamesUntilTradable'] = serversList[str(commandInfo['serverId'])]['traderesign']
+                    p['gamesUntilTradable'] = int(serversList[str(commandInfo['serverId'])].get('traderesign', 0))
                     for i in range(0,1):
                         salaryInfo = dict()
                         salaryInfo['season'] = export['gameAttributes']['season'] + i + 1
