@@ -1937,7 +1937,12 @@ async def runresign(embed, text, commandInfo):
                             except: pass
                             print(serversList[str(commandInfo['serverId'])]['hardcap'])
                             if payroll + t['amount']*1000 > float(serversList[str(commandInfo['serverId'])]['hardcap'])*1000:
+                                if valid:
+                                    # was silently skipped before; tell the team why
+                                    text += '• **' + p['firstName'] + ' ' + p['lastName'] + '** - not re-signed: $' + str(t['amount']) + 'M would put the team over the $' + str(serversList[str(commandInfo['serverId'])]['hardcap']) + 'M hard cap (payroll $' + str(round(payroll/1000, 2)) + 'M)' + '\n'
                                 valid = False
+                            elif not valid:
+                                text += '• **' + p['firstName'] + ' ' + p['lastName'] + '** - not re-signed: not up for re-signing with this team' + '\n'
                             if valid:
                                 print("ok")
                                 accepted = False
