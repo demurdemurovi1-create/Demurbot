@@ -194,6 +194,7 @@ modScreen = {
     'applyt1 marketing [team]': 'GM BP team marketing Tier 1: 15% off re-signed players (mod)',
     'applyt2 marketing [team]': 'Tier 2: 10% off re-signed players under $37.5M (mod)',
     'applyt3 marketing [team]': 'Tier 3: 5% off re-signed players under $25M (mod)',
+    'applyt1 dev': 'GM BP player development: one "player +3 spd +2 dnk" per line. T1 25 ups, T2 15, T3 5 (mod)',
     'removetradepen': 'Remove trade penalty from a team',
     'resetgamestrade': 'Make all players tradeable immediately',
     'reprog': 'Re-run progressions for everyone, or -reprog <player> for one player (mod)',

@@ -105,6 +105,11 @@ def addrating(embed, player, commandInfo):
                 embed.add_field(name = 'supply one of the following rating names', value = str(['hgt','stre','endu','jmp','dnk','spd','ins','fg','ft','tp','oiq','diq','reb','pss','drb']))
     embed.add_field(name='Added rating', value='This added rating '+str(amount)+ ' to rating '+str(rating)+' of player '+str(player['name']))
     return embed
+def skills_from_comp(compdict):
+    """Skill tags for a composite dict (same thresholds addrating uses)."""
+    thresholds = [('3', '3', 59), ('A', 'A', 63), ('B', 'B', 68), ('Di', 'Di', 57), ('Dp', 'Dp', 61),
+                  ('Po', 'Po', 61), ('Ps', 'Ps', 63), ('R', 'R', 61), ('Usage', 'V', 61)]
+    return [tag for key, tag, limit in thresholds if compdict[key] > limit]
 def default(embed, player, commandInfo):
     embed.add_field(name='A New Player Command', value=f'This is the template for player commands that have no assigned funtion to fill the embed. Player name: {player["name"]}')
     return (embed)

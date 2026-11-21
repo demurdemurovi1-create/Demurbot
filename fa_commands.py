@@ -2058,7 +2058,7 @@ async def apply_marketing(embed, text, commandInfo, tier):
     if args and args[0].lower() == 'marketing':
         args = args[1:]
     elif args:
-        embed.add_field(name='Unknown perk', value="Only 'marketing' is supported. " + usage)
+        embed.add_field(name='Unknown perk', value="Only 'marketing' and 'dev' are supported. " + usage)
         return embed
     if not args:
         embed.add_field(name='Missing team', value=usage)
@@ -2140,13 +2140,165 @@ async def apply_marketing(embed, text, commandInfo, tier):
     return embed
 
 
+async def apply_perk(embed, text, commandInfo, tier):
+    # split on any whitespace so "-applyt1 dev" followed by a newline still works
+    args = ' '.join(text[1:]).split()
+    if args and args[0].lower() == 'dev':
+        return await apply_dev(embed, commandInfo, tier)
+    return await apply_marketing(embed, [text[0]] + args, commandInfo, tier)
+
+
 async def applyt1(embed, text, commandInfo):
-    return await apply_marketing(embed, text, commandInfo, 1)
+    return await apply_perk(embed, text, commandInfo, 1)
 
 
 async def applyt2(embed, text, commandInfo):
-    return await apply_marketing(embed, text, commandInfo, 2)
+    return await apply_perk(embed, text, commandInfo, 2)
 
 
 async def applyt3(embed, text, commandInfo):
-    return await apply_marketing(embed, text, commandInfo, 3)
+    return await apply_perk(embed, text, commandInfo, 3)
+
+
+# ---------------------------------------------------------------------------
+# GM BP "Player development": rating ups on AI players
+# ---------------------------------------------------------------------------
+DEV_TIERS = {
+    1: {'ups': 25, 'pot_under': 75, 'per_player': 15, 'per_attr': 10},
+    2: {'ups': 15, 'pot_under': 70, 'per_player': 10, 'per_attr': None},
+    3: {'ups': 5, 'pot_under': 65, 'per_player': None, 'per_attr': None},
+}
+DEV_ATTRS = {
+    'stre': ['str', 'stre', 'strength'],
+    'spd': ['spd', 'speed'],
+    'jmp': ['jmp', 'jump', 'jumping', 'vert'],
+    'endu': ['endu', 'end', 'endurance'],
+    'ins': ['ins', 'inside', 'insidescoring'],
+    'dnk': ['dnk', 'dunk', 'dunking'],
+    'ft': ['ft', 'freethrow'],
+    'fg': ['fg', 'mid', 'midrange'],
+    'tp': ['tp', '3pt', '3p', 'three', 'threes', 'threepoint'],
+    'oiq': ['oiq'],
+    'diq': ['diq'],
+    'drb': ['drb', 'dribble', 'dribbling', 'handle', 'handling'],
+    'pss': ['pss', 'pass', 'passing'],
+    'reb': ['reb', 'rebound', 'rebounding'],
+}
+DEV_ALIAS = {alias: attr for attr, aliases in DEV_ATTRS.items() for alias in aliases}
+
+
+def _add_chunks(embed, title, lines):
+    chunk, n = '', 0
+    for line in lines:
+        if len(chunk) + len(line) + 1 > 1000:
+            n += 1
+            embed.add_field(name=title if n == 1 else title + ' (cont.)', value=chunk, inline=False)
+            chunk = ''
+        chunk += line + '\n'
+    if chunk:
+        embed.add_field(name=title if n == 0 else title + ' (cont.)', value=chunk, inline=False)
+
+
+async def apply_dev(embed, commandInfo, tier):
+    import re
+    from difflib import SequenceMatcher
+    from unidecode import unidecode
+    import player_commands
+    export = shared_info.serverExports[commandInfo['serverId']]
+    serverSettings = serversList[str(commandInfo['serverId'])]
+    season = export['gameAttributes']['season']
+    cfg = DEV_TIERS[tier]
+    cmd = 'applyt' + str(tier)
+    usage = ('Usage (one player per line): -' + cmd + ' dev\nmanuel holder +3 spd +3 inside +6 dnk\nTsutomu ishii +5 spd')
+
+    body = re.sub(r'^\s*\S*?applyt[123]\s+dev\b', '', commandInfo['message'].content, count=1, flags=re.I)
+    lines = [l.strip() for l in body.replace(',', ' ').split('\n') if l.strip()]
+    if not lines:
+        embed.add_field(name='No players given', value=usage)
+        return embed
+
+    occupied = set(int(v) for v in serverSettings.get('teamlist', {}).values())
+    abbrev = {t['tid']: t['abbrev'] for t in export['teams']}
+    byPid = {p['pid']: p for p in export['players']}
+    errors = []
+    entries = {}   # pid -> {'name', 'ups': {attr: n}}
+    for line in lines:
+        matches = list(re.finditer(r'\+\s*(\d+)\s*([A-Za-z0-9]+)', line))
+        name = line[:matches[0].start()].strip() if matches else ''
+        if not matches or not name:
+            errors.append('`' + line + '` - expected: player name +N attribute ...')
+            continue
+        pid = basics.find_match(' ' + name, export, True, settings=serverSettings)
+        p = byPid.get(pid)
+        if p is None:
+            errors.append(name + ' - player not found')
+            continue
+        full = p['firstName'] + ' ' + p['lastName']
+        norm = lambda s: re.sub(r'[^a-z ]', '', unidecode(s).lower()).strip()
+        if SequenceMatcher(a=norm(name), b=norm(full)).ratio() < 0.75:
+            errors.append(name + " - no close match (closest was " + full + ")")
+            continue
+        ent = entries.setdefault(pid, {'name': full, 'ups': {}})
+        for m in matches:
+            n, alias = int(m.group(1)), m.group(2).lower()
+            if alias == 'hgt' or alias == 'height':
+                errors.append(full + ' - height cannot be developed')
+                continue
+            attr = DEV_ALIAS.get(alias)
+            if attr is None:
+                errors.append(full + " - unknown attribute '" + m.group(2) + "'")
+                continue
+            if n <= 0:
+                errors.append(full + ' - +0 ' + alias + ' does nothing')
+                continue
+            ent['ups'][attr] = ent['ups'].get(attr, 0) + n
+
+    total = 0
+    for pid, ent in entries.items():
+        p = byPid[pid]
+        r = p['ratings'][-1]
+        pl = sum(ent['ups'].values())
+        total += pl
+        full = ent['name']
+        if p['tid'] < 0 or p['tid'] in occupied:
+            errors.append(full + ' - not an AI player (must be on a team no user controls)')
+        if r['pot'] >= cfg['pot_under']:
+            errors.append(full + ' - potential ' + str(r['pot']) + ' is not under ' + str(cfg['pot_under']))
+        if p['draft']['year'] >= season:
+            errors.append(full + ' - rookie drafted in the upcoming offseason, ups not allowed')
+        if cfg['per_player'] is not None and pl > cfg['per_player']:
+            errors.append(full + ' - ' + str(pl) + ' ups, max ' + str(cfg['per_player']) + ' per player')
+        for attr, n in ent['ups'].items():
+            if cfg['per_attr'] is not None and n > cfg['per_attr']:
+                errors.append(full + ' - +' + str(n) + ' ' + attr + ', max ' + str(cfg['per_attr']) + ' on one attribute')
+            if r[attr] + n > 100:
+                errors.append(full + ' - ' + attr + ' is ' + str(r[attr]) + ', +' + str(n) + ' would pass 100')
+    if total > cfg['ups']:
+        errors.append('Total ' + str(total) + ' ups, Tier ' + str(tier) + ' has ' + str(cfg['ups']))
+    if not entries and not errors:
+        errors.append('No valid lines found. ' + usage)
+
+    if errors:
+        embed.add_field(name='Nothing applied - fix these and resend', value='Tier ' + str(tier) + ' dev', inline=False)
+        _add_chunks(embed, 'Problems', ['- ' + e for e in errors])
+        return embed
+
+    result = []
+    for pid, ent in entries.items():
+        p = byPid[pid]
+        r = p['ratings'][-1]
+        oldOvr, oldPot = r['ovr'], r['pot']
+        for attr, n in ent['ups'].items():
+            r[attr] = r[attr] + n
+        gap = r['pot'] - r['ovr']
+        r['ovr'] = player_commands.ovr(r)
+        r['pot'] = min(100, gap + r['ovr'])
+        r['skills'] = player_commands.skills_from_comp(player_commands.calccompsingle(r, True))
+        ups = ', '.join('+' + str(n) + ' ' + attr for attr, n in ent['ups'].items())
+        result.append('**' + ent['name'] + '** (' + abbrev.get(p['tid'], '?') + ') ' + str(oldOvr) + '/' + str(oldPot)
+                      + ' -> ' + str(r['ovr']) + '/' + str(r['pot']) + ': ' + ups + ' (' + str(sum(ent['ups'].values())) + ' ups)')
+    _add_chunks(embed, 'Player development Tier ' + str(tier) + ' - ' + str(total) + ' of ' + str(cfg['ups']) + ' ups used', result)
+    path_to_file = data_path(f'exports/{commandInfo["serverId"]}-export.json')
+    await basics.save_db(export, path_to_file)
+    embed.add_field(name='Saved', value='Run -updateexport to get a new export link.', inline=False)
+    return embed
