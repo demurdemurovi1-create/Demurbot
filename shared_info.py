@@ -37,7 +37,7 @@ def get_server_lock(guild_id):
         server_locks[sid].set()  # starts unlocked (set = free)
     return server_locks[sid]
 
-modOnlyCommands = ['addrating','removetradepen','addredirect','removeredirect','removereleasedplayer','clearalloffers','edit', 'load', 'addgm', 'removegm', 'startdraft', 'runresignings', 'autocut', 'runfa','pausedraft','reprog','resetgamestrade','addrule','deleterule','addaward','removeaward','autofa','echo','media','addsynergy','removesynergy']
+modOnlyCommands = ['addrating','removetradepen','addredirect','removeredirect','removereleasedplayer','clearalloffers','edit', 'load', 'addgm', 'removegm', 'startdraft', 'runresignings', 'autocut', 'runfa','pausedraft','reprog','resetgamestrade','addrule','deleterule','addaward','removeaward','autofa','applyt1','applyt2','applyt3','echo','media','addsynergy','removesynergy']
 
 SYNERGY_COMMANDS = {'synergy', 'synergylineups', 'leaguesynergy', 'synergysort', 'findsynergy'}
 
@@ -231,6 +231,9 @@ _TIP_DESCRIPTIONS = {
     'autocut': 'Trim over-the-limit rosters (mod)',
     'addrating': "Nudge a player's ratings (mod)",
     'removereleasedplayer': "Clear a released player's deal (mod)",
+    'applyt1': 'GM BP team marketing Tier 1: 15% off re-signed players, e.g. -applyt1 marketing CHI (mod)',
+    'applyt2': 'GM BP team marketing Tier 2: 10% off re-signed players under $37.5M (mod)',
+    'applyt3': 'GM BP team marketing Tier 3: 5% off re-signed players under $25M (mod)',
     'removetradepen': "Lift a team's trade penalty (mod)",
     'resetgamestrade': 'Make everyone tradeable now (mod)',
     'reprog': 'Re-run progressions for everyone, or -reprog <player> for one player (mod)',

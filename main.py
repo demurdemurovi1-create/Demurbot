@@ -311,7 +311,7 @@ async def on_message(message):
                 command = text[0]
 
                 command = str.lower(command)
-                if not command or not command.isalpha():
+                if not command or not command.isalnum():
                     return
                 if command in commandAliases:
                     text[0] = commandAliases[command]

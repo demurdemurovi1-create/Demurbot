@@ -30,7 +30,10 @@ commandFuncs = {
     'autofa':fa_commands.autofa,
     'bulkoffermins':fa_commands.bulkoffermins,
     'autors':fa_commands.autoresign,
-    'removereleasedplayer':fa_commands.removereleasedplayer
+    'removereleasedplayer':fa_commands.removereleasedplayer,
+    'applyt1':fa_commands.applyt1,
+    'applyt2':fa_commands.applyt2,
+    'applyt3':fa_commands.applyt3
 }
 
 async def process_text(text, message):
