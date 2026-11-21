@@ -2017,3 +2017,136 @@ async def runresign(embed, text, commandInfo):
         print("could not")
         embed.add_field(name='Could Not Run Re-Signings', value='Make sure your export is in the re-signings phase, and that you have mod permissions.')
     return embed
+
+
+# ---------------------------------------------------------------------------
+# GM BP "Team marketing": discounts on contracts a team re-signed this offseason
+# ---------------------------------------------------------------------------
+MARKETING_TIERS = {
+    1: {'pct': 15, 'under': None},      # all re-signed players
+    2: {'pct': 10, 'under': 37500},     # re-signed players under $37.5M
+    3: {'pct': 5, 'under': 25000},      # re-signed players under $25M
+}
+LONG_DEAL_FLOOR = 25000   # a discount can't take a 4-5 year deal below $25M
+LONG_DEAL_YEARS = 4
+MARKETING_MIN_SALARY = 4500
+
+
+def marketing_price(amount, years, tier):
+    """Discounted salary (thousands) for a contract, or the same amount if not eligible."""
+    t = MARKETING_TIERS[tier]
+    if t['under'] is not None and amount >= t['under']:
+        return amount
+    new = amount * (1 - t['pct'] / 100)
+    if years >= LONG_DEAL_YEARS:
+        new = max(new, min(amount, LONG_DEAL_FLOOR))
+    new = max(new, min(amount, MARKETING_MIN_SALARY))
+    return min(amount, round(new, -1))
+
+
+async def apply_marketing(embed, text, commandInfo, tier):
+    export = shared_info.serverExports[commandInfo['serverId']]
+    serverSettings = serversList[str(commandInfo['serverId'])]
+    season = export['gameAttributes']['season']
+    phase = export['gameAttributes']['phase']
+    cmd = text[0].lower()
+    usage = 'Usage: -' + cmd + ' marketing [team abbreviation] (optionally a player name to discount only that player)'
+    if phase not in (7, 8):
+        embed.add_field(name='Wrong phase', value='Team marketing applies to players re-signed this offseason. Run it during the re-signings or free agency phase, before the season advances.')
+        return embed
+    args = list(text[1:])
+    if args and args[0].lower() == 'marketing':
+        args = args[1:]
+    elif args:
+        embed.add_field(name='Unknown perk', value="Only 'marketing' is supported. " + usage)
+        return embed
+    if not args:
+        embed.add_field(name='Missing team', value=usage)
+        return embed
+    team = None
+    for t in export['teams']:
+        if t['abbrev'].lower() == args[0].lower():
+            team = t
+    if team is None:
+        embed.add_field(name='Unknown team', value="No team with abbreviation '" + args[0] + "'. " + usage)
+        return embed
+    tid = team['tid']
+    only = None
+    if len(args) > 1:
+        only = basics.find_match(' ' + ' '.join(args[1:]), export, True, settings=serverSettings)
+
+    pids = []
+    for e in export.get('events', []):
+        if e.get('type') == 'reSigned' and e.get('season') == season and e.get('tids') and e['tids'][0] == tid:
+            for pid in e.get('pids', []):
+                if pid not in pids:
+                    pids.append(pid)
+    byPid = {p['pid']: p for p in export['players']}
+    discounts = serverSettings.setdefault('discounts', {})
+    t = MARKETING_TIERS[tier]
+    applied, skipped = [], []
+    for pid in pids:
+        p = byPid.get(pid)
+        if p is None or (only is not None and pid != only):
+            continue
+        name = p['firstName'] + ' ' + p['lastName']
+        if p['tid'] != tid or p['contract']['exp'] <= season:
+            continue
+        old = p['contract']['amount']
+        years = p['contract']['exp'] - season
+        prev = discounts.get(str(pid))
+        if prev and prev.get('season') == season:
+            skipped.append(name + ' - already discounted (Tier ' + str(prev['tier']) + ')')
+            continue
+        if t['under'] is not None and old >= t['under']:
+            skipped.append(name + ' - $' + str(old / 1000) + 'M is not under $' + str(t['under'] / 1000) + 'M')
+            continue
+        new = marketing_price(old, years, tier)
+        if new >= old:
+            skipped.append(name + ' - $' + str(old / 1000) + 'M/' + str(years) + 'Y already at its floor')
+            continue
+        p['contract']['amount'] = new
+        for row in p.get('salaries', []):
+            if season < row['season'] <= p['contract']['exp']:
+                row['amount'] = new
+        discounts[str(pid)] = {'tier': tier, 'season': season, 'from': old, 'to': new}
+        applied.append('**' + name + '** $' + str(old / 1000) + 'M -> $' + str(new / 1000) + 'M (' + str(years) + 'Y)')
+
+    def add_chunks(title, lines):
+        chunk = ''
+        n = 0
+        for line in lines:
+            if len(chunk) + len(line) + 1 > 1000:
+                n += 1
+                embed.add_field(name=title if n == 1 else title + ' (cont.)', value=chunk, inline=False)
+                chunk = ''
+            chunk += line + '\n'
+        if chunk:
+            embed.add_field(name=title if n == 0 else title + ' (cont.)', value=chunk, inline=False)
+
+    if not pids:
+        embed.add_field(name='Nothing to discount', value='No players were re-signed by ' + team['abbrev'] + ' this offseason.')
+        return embed
+    if applied:
+        add_chunks('Team marketing Tier ' + str(tier) + ' (' + str(t['pct']) + '%) - ' + team['abbrev'], applied)
+        path_to_file = data_path(f'exports/{commandInfo["serverId"]}-export.json')
+        await basics.save_db(export, path_to_file)
+        await basics.save_db(serversList)
+        embed.add_field(name='Saved', value='Run -updateexport to get a new export link.', inline=False)
+    else:
+        embed.add_field(name='No discounts applied', value='Nothing eligible for Tier ' + str(tier) + ' on ' + team['abbrev'] + '.', inline=False)
+    if skipped:
+        add_chunks('Skipped', skipped)
+    return embed
+
+
+async def applyt1(embed, text, commandInfo):
+    return await apply_marketing(embed, text, commandInfo, 1)
+
+
+async def applyt2(embed, text, commandInfo):
+    return await apply_marketing(embed, text, commandInfo, 2)
+
+
+async def applyt3(embed, text, commandInfo):
+    return await apply_marketing(embed, text, commandInfo, 3)
