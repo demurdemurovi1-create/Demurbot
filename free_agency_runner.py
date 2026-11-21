@@ -1214,7 +1214,10 @@ async def resign_prices(playerId, teamId, serverExport, serverId, values):
             for i in range(settings['maxContractLength']):
                 i = i+1
                 price = round(reSignFinal[0] + 0.15*(abs(i - reSignFinal[1]))*reSignFinal[0], -1)
-                if price <= settings['maxContract'] and price >= settings['minContract']:
+                # Lengths whose price exceeds the max are capped at the max (as in BBGM),
+                # not dropped: dropping them gave 0% odds for any other length.
+                price = min(price, settings['maxContract'])
+                if price >= settings['minContract']:
                     reSignPrices[i] = price
     reSignPrices['main'] = reSignFinal
     return(reSignPrices)
