@@ -2187,6 +2187,23 @@ DEV_ATTRS = {
 DEV_ALIAS = {alias: attr for attr, aliases in DEV_ATTRS.items() for alias in aliases}
 
 
+DEV_EXPENSIVE_ABOVE = 80   # a point that takes a rating above this costs 2 ups
+
+
+def dev_points(current, ups):
+    """Rating points bought by `ups` ups on a rating at `current`, and the ups left over.
+
+    Each point costs 1 up, or 2 when the new rating would be above 80."""
+    points = 0
+    while ups > 0:
+        cost = 2 if current + points + 1 > DEV_EXPENSIVE_ABOVE else 1
+        if ups < cost:
+            break
+        ups -= cost
+        points += 1
+    return points, ups
+
+
 def _add_chunks(embed, title, lines):
     chunk, n = '', 0
     for line in lines:
@@ -2271,8 +2288,11 @@ async def apply_dev(embed, commandInfo, tier):
         for attr, n in ent['ups'].items():
             if cfg['per_attr'] is not None and n > cfg['per_attr']:
                 errors.append(full + ' - +' + str(n) + ' ' + attr + ', max ' + str(cfg['per_attr']) + ' on one attribute')
-            if r[attr] + n > 100:
-                errors.append(full + ' - ' + attr + ' is ' + str(r[attr]) + ', +' + str(n) + ' would pass 100')
+            points, left = dev_points(r[attr], n)
+            if left:
+                errors.append(full + ' - ' + attr + ' is ' + str(r[attr]) + ' and points above ' + str(DEV_EXPENSIVE_ABOVE) + ' cost 2 ups, so +' + str(n) + ' leaves ' + str(left) + ' up unusable. Use an amount that spends evenly')
+            elif r[attr] + points > 100:
+                errors.append(full + ' - ' + attr + ' is ' + str(r[attr]) + ', +' + str(n) + ' ups would pass 100')
     if total > cfg['ups']:
         errors.append('Total ' + str(total) + ' ups, Tier ' + str(tier) + ' has ' + str(cfg['ups']))
     if not entries and not errors:
@@ -2288,15 +2308,17 @@ async def apply_dev(embed, commandInfo, tier):
         p = byPid[pid]
         r = p['ratings'][-1]
         oldOvr, oldPot = r['ovr'], r['pot']
+        gains = {}
         for attr, n in ent['ups'].items():
-            r[attr] = r[attr] + n
+            gains[attr] = dev_points(r[attr], n)[0]
+            r[attr] = r[attr] + gains[attr]
         gap = r['pot'] - r['ovr']
         r['ovr'] = player_commands.ovr(r)
         r['pot'] = min(100, gap + r['ovr'])
         r['skills'] = player_commands.skills_from_comp(player_commands.calccompsingle(r, True))
-        ups = ', '.join('+' + str(n) + ' ' + attr for attr, n in ent['ups'].items())
+        ups = ', '.join('+' + str(gains[attr]) + ' ' + attr + (' (' + str(n) + ' ups)' if gains[attr] != n else '') for attr, n in ent['ups'].items())
         result.append('**' + ent['name'] + '** (' + abbrev.get(p['tid'], '?') + ') ' + str(oldOvr) + '/' + str(oldPot)
-                      + ' -> ' + str(r['ovr']) + '/' + str(r['pot']) + ': ' + ups + ' (' + str(sum(ent['ups'].values())) + ' ups)')
+                      + ' -> ' + str(r['ovr']) + '/' + str(r['pot']) + ': ' + ups + (' - ' + str(sum(ent['ups'].values())) + ' ups total' if len(ent['ups']) > 1 else ''))
     _add_chunks(embed, 'Player development Tier ' + str(tier) + ' - ' + str(total) + ' of ' + str(cfg['ups']) + ' ups used', result)
     path_to_file = data_path(f'exports/{commandInfo["serverId"]}-export.json')
     await basics.save_db(export, path_to_file)
