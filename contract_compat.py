@@ -36,7 +36,11 @@ def upgrade_export(export):
         cs = p.get('contracts') or []
         c = _active(cs)
         if c:
-            p['contract'] = {'amount': round(_amount_for(c, season)), 'exp': c['start'] + len(c['amounts']) - 1}
+            exp = c['start'] + len(c['amounts']) - 1
+            # After the playoffs the salary that counts is next season's, so per-year
+            # raises/cuts inside a contract show up (expiring deals keep this year's).
+            yr = season + 1 if (ga.get('phase', 0) > 3 and exp > season) else season
+            p['contract'] = {'amount': round(_amount_for(c, yr)), 'exp': exp}
         elif 'contract' not in p:
             p['contract'] = {'amount': ga.get('minContract', 750), 'exp': season}
         p['_c0'] = copy.deepcopy(p['contract'])
